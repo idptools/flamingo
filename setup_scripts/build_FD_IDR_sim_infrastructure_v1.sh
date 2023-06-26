@@ -1,35 +1,30 @@
 #!/bin/zsh
 
-## Version 6.0
+## Version 1
 ## This script sets up basically EVERYTHING needed for running 
-## CAMPARI simulations from a list of sequences on the HTCF cluster.
+## FD+IDR CAMPARI simulations from a list of sequences on the HTCF cluster.
 ## It serves both as a functioning script but also as living documentation
 ## of how to do this. Updated for Holehouselab as of March 5th 2020
-##
-## Version 5 update: Added CAMPARI VERSION (May 2020)
-## Version 6 update: Added queue priorities (Sept 2020)
-## Version FD_IDR update: Ability to launch FD + fixed IDR simulations (March 2022)
-## Version FD_IDR_2 update: Added ability to provide list of PDB structures (July 2022)
 
 ## !!!! THESE ARE THE ONLY THINGS YOU SHOULD NEED TO CHANGE !!!!
 
-# Path to binding_campari repo
-BINDING_CAMPARI_DIR="/home/degriffith/repos/binding_campari"
+# Path to FLAMINGO repository
+FLAMINGO_DIR="/home/degriffith/repos/flamingo"
 
 # define the input sequence files
-idr_filename="config_files/round1_AD_variants.isf"
+idr_filename="IDR_variants.isf"
 
 # define the input structures file (list of PDBs)
 ### CHANGE THESE and RERUN ###
-pdbstructure_filename="config_files/TAZ2_WT_structures_#.txt"
-fd_filename="config_files/TAZ2_WT.isf"
+pdbstructure_filename="pdb_structures.txt"
+fd_filename="FD.isf"
 
 # define the fixed IDR residues (must be present in PDB)
-fixed_idr_residues="config_files/round1_AD_fixed_residues.txt"
+fixed_idr_residues="fixed_residues.txt"
 
 # Simulation parameters
 MC_MODE=ts          # MUST be either 'ts' (Temperature Sweep), 'hs' (Hamiltonian Switch), 'ev', or 'standard'
-TEMPERATURE=360     # 380 Kelvin
+TEMPERATURE=360     # 360 Kelvin
 SALT=0.015          # 15 mM NaCl
 PRE_EQ=2000000      #  2 M - number of steps before main simulation starts
 EQ=4000000          #  4 M - number of equilibration steps in main simulation
@@ -119,7 +114,7 @@ do
     idr_fixed=$(echo "$idr_fixed_line" | awk '{print $2}')
 
     # Check flexible IDR region for prolines
-    python "${BINDING_CAMPARI_DIR}/flanking_idr/scripts/check_prolines.py" $idr_sequence $idr_fixed
+    python "${FLAMINGO_DIR}/setup_scripts/check_prolines.py" $idr_sequence $idr_fixed
     if [ "$?" -ne "0" ]
     then
         IDR_prolines=FALSE
@@ -156,12 +151,12 @@ do
 
         if [ "${CAMPARI_VERSION}" = "3" ]
         then
-            cp "${BINDING_CAMPARI_DIR}/flanking_idr/params/build_FD_IDR.key" build.key
+            cp "${FLAMINGO_DIR}/keyfiles/build_FD_IDR.key" build.key
         if [ "$MC_MODE" = "ev" ]
             then
-                cp "${BINDING_CAMPARI_DIR}/flanking_idr/params/run_EV_FD_IDR.key" run.key
+                cp "${FLAMINGO_DIR}/keyfiles/run_EV_FD_IDR.key" run.key
             else
-                cp "${BINDING_CAMPARI_DIR}/flanking_idr/params/run_FD_IDR.key" run.key
+                cp "${FLAMINGO_DIR}/keyfiles/run_FD_IDR.key" run.key
         fi
         else
             echo "Invalid option passed for CAMPARI_VERSION: ${CAMPARI_VERSION} (must be 3)"
@@ -183,10 +178,10 @@ do
 
 
         # Create PSWFILE.psw (very creative name, I know)
-        python "${BINDING_CAMPARI_DIR}/flanking_idr/scripts/make_psw_file.py" $fd_sequence fixed.tmp PSWFILE.psw --idr-first --idr-caps
+        python "${FLAMINGO_DIR}/setup_scripts/create_psw_file.py" $fd_sequence fixed.tmp PSWFILE.psw --idr-first --idr-caps
 
         # Create seq.in
-        python "${BINDING_CAMPARI_DIR}/utils/make_seq_in_file.py" $fd_sequence idr.tmp seq.in --idr-first --idr-caps
+        python "${FLAMINGO_DIR}/setup_scripts/create_sequence_file.py" $fd_sequence idr.tmp seq.in --idr-first --idr-caps
 
         # Run 1-step simulation to generate complete PDB structure
         campari3 -k build.key > build.log
@@ -194,10 +189,10 @@ do
         rm *.int
 
         # Create dres.in
-        python "${BINDING_CAMPARI_DIR}/flanking_idr/scripts/make_dres_in_file.py" __START.pdb fixed.tmp dres.in --idr-first --force-constant 200.0
+        python "${FLAMINGO_DIR}/setup_scripts/create_restraint_file.py" __START.pdb fixed.tmp dres.in --idr-first --force-constant 200.0
 
         # Copy modified autoSim
-        cp "${BINDING_CAMPARI_DIR}/flanking_idr/scripts/autoSim_vFD_IDR.sh" .
+        cp "${FLAMINGO_DIR}/setup_scripts/autoSim_vFD_IDR.sh" .
 
         ##############
         ## Now we run autoSim! autoSim takes an input sequence ($sequence), keyfile,
@@ -252,7 +247,7 @@ do
                 rm pre_eq.key
                 rm production.key
                 cp ../../run.key .
-                python "${BINDING_CAMPARI_DIR}/flanking_idr/scripts/create_tsmc_run_script.py" --out run_sims.py --keyfile run.key --preeq $PRE_EQ --eq $EQ --mc $PROD --mode $MC_MODE --temp $TEMPERATURE --aux-enter-prob $AUXCHAIN_ENTERPROB --aux-chain-freq $AUXCHAIN_ENTERFREQ --aux-chain-steps $AUXCHAIN_NSTEPS   
+                python "${FLAMINGO_DIR}/setup_scripts/create_tsmc_run_script.py" --out run_sims.py --keyfile run.key --preeq $PRE_EQ --eq $EQ --mc $PROD --mode $MC_MODE --temp $TEMPERATURE --aux-enter-prob $AUXCHAIN_ENTERPROB --aux-chain-freq $AUXCHAIN_ENTERFREQ --aux-chain-steps $AUXCHAIN_NSTEPS   
                 cd ..
             done
             cd ..
@@ -273,7 +268,7 @@ do
                 rm pre_eq_helix.key
                 rm production.key
                 cp ../../run.key .
-                python "${BINDING_CAMPARI_DIR}/flanking_idr/scripts/create_tsmc_run_script.py" --out run_sims.py --keyfile run.key --preeq $PRE_EQ --preeq-helix --eq $EQ --mc $PROD --mode $MC_MODE --temp $TEMPERATURE --aux-enter-prob $AUXCHAIN_ENTERPROB --aux-chain-freq $AUXCHAIN_ENTERFREQ --aux-chain-steps $AUXCHAIN_NSTEPS 
+                python "${FLAMINGO_DIR}/setup_scripts/create_tsmc_run_script.py" --out run_sims.py --keyfile run.key --preeq $PRE_EQ --preeq-helix --eq $EQ --mc $PROD --mode $MC_MODE --temp $TEMPERATURE --aux-enter-prob $AUXCHAIN_ENTERPROB --aux-chain-freq $AUXCHAIN_ENTERFREQ --aux-chain-steps $AUXCHAIN_NSTEPS 
                 cd ..
             done
             cd ..
@@ -282,7 +277,7 @@ do
         rm run_seq.sh
 
         # copy the script run_seq.sh, which could be improved, but automates job submission
-        cp "${BINDING_CAMPARI_DIR}/flanking_idr/scripts/run_seq_tsmc.sh" .
+        cp "${FLAMINGO_DIR}/setup_scripts/run_seq_tsmc.sh" .
         
         echo "${name}" > JOB_PREFIX.txt 
 
