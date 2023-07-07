@@ -189,7 +189,7 @@ do
         rm *.int
 
         # Create dres.in
-        python "${FLAMINGO_DIR}/setup_scripts/create_restraint_file.py" __START.pdb fixed.tmp dres.in --idr-first --force-constant 200.0
+        python "${FLAMINGO_DIR}/setup_scripts/create_restraint_file.py" __START.pdb fixed.tmp dres.in --idr-first --force-constant 500.0
 
         # Copy modified autoSim
         cp "${FLAMINGO_DIR}/setup_scripts/autoSim_vFD_IDR.sh" .

@@ -72,7 +72,7 @@ else: # HSMC or TSMC
         script_str += f"\t\tsimulation.HamiltonianSwitchMC(steps={args.aux_chain_steps})\n"
 
     else: # Temp sweep
-        temp_list = [args.temp+10, args.temp+600, args.temp+400, args.temp+200, 
+        temp_list = [args.temp+10, args.temp+1000, args.temp+500, args.temp+250, 
                      args.temp+100, args.temp+80, args.temp+60, args.temp+40, 
                      args.temp+20, args.temp+10]
         str_temp_list = str(temp_list)
