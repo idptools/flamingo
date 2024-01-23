@@ -1,6 +1,10 @@
 # flamingo
 Repo for running and analyzing simulations of IDR motifs bound to folded domains
 
+## -- NOTE 1/23/24 -- This repo is not usuable yet. It is only public so we can explore pulling it with Docker ##
+
+
+
 ### For Jeff & Borna - 7/7/23
 
 The requisite scripts for setup and analysis of FD+IDR simulations should all be in the repository. The most time-consuming step of the process is minimization of an AF2 structure in preparation for MC simulations. Fortunately, for our TAZ2 systems, we should not need to do any additional minization. All of the structures we need should be located in my `/work/degriffith/TADS/p300_coactivators` repo (I can help you find specific files you might need). 
